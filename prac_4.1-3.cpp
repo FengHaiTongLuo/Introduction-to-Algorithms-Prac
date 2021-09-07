@@ -5,7 +5,7 @@
 #include <ctime>
 #include <cassert>
 
-#define OPTIMIZATION 1
+#define OPTIMIZATION 0
 
 struct Sub {
     int low;
