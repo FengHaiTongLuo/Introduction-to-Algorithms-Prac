@@ -5,16 +5,19 @@
 #include <ctime>
 #include <cassert>
 
+#define OPTIMIZATION 1
+
 struct Sub {
     int low;
     int high;
     int sum;
 };
 
-Sub FindMaximumSubarray1(const int array[], int count) {
+Sub FindMaximumSubarray1(const int array[], int low, int high) {
     Sub maxSub = { 0, 0, -INT_MIN};
+    int count = high - low + 1;
     if (count == 1) {
-        maxSub.sum = array[0];
+        maxSub = { low, low, array[low] };
         return maxSub;
     }
 
@@ -23,12 +26,12 @@ Sub FindMaximumSubarray1(const int array[], int count) {
     for (int i = 0; i < count; ++i) {
         for (int j = i; j < count; ++j) {
             if (i != j) {
-                sum[i][j] = sum[i][j-1] + array[j];
+                sum[i][j] = sum[i][j-1] + array[j+low];
             } else {
-                sum[i][j] = array[j];
+                sum[i][j] = array[j+low];
             }
             if (sum[i][j] > maxSub.sum) {
-                maxSub = { i, j, sum[i][j] };
+                maxSub = { i+low, j+low, sum[i][j] };
             }
         }
     }
@@ -65,14 +68,21 @@ Sub FindMaxCross(const int array[], int low, int center, int high) {
     return sub;
 }
 
-Sub Recursive(const int array[], int low, int high) {
+Sub FindMaximumSubarray2(const int array[], int low, int high) {
     if (high == low) {
         Sub s0 = { low, high, array[low] };
         return s0;
     }
+#if OPTIMIZATION
+    // optimization
+    if (low - high + 1 <= 20) {
+        return FindMaximumSubarray1(array, low, high);
+    }
+#endif
+
     int center = (low + high) / 2;
-    Sub s1 = Recursive(array, low, center);
-    Sub s2 = Recursive(array, center + 1, high);
+    Sub s1 = FindMaximumSubarray2(array, low, center);
+    Sub s2 = FindMaximumSubarray2(array, center + 1, high);
     Sub s3 = FindMaxCross(array, low, center, high);
     if (s1.sum >= s2.sum && s1.sum >= s3.sum) {
         return s1;
@@ -80,10 +90,6 @@ Sub Recursive(const int array[], int low, int high) {
         return s2;
     }
     return s3;
-}
-
-Sub FindMaximumSubarray2(const int array[], int count) {
-    return Recursive(array, 0, count - 1);
 }
 
 int* GeneratetData(int count) {
@@ -99,25 +105,28 @@ void DestroyData(int* data) {
 }
 
 int main() {
-    time_t t;
-    srand((unsigned)time(&t));
-    for (int count = 1; count < 1100; ++count) {
+    for (int count = 4; count < 1100; ++count) {
         int* arr = GeneratetData(count);
         clock_t c1 = clock();
         Sub ans1;
-        for (int i = 0; i < 10000; ++i) {
-            ans1 = FindMaximumSubarray1(arr, count);
+        for (int i = 0; i < 200000; ++i) {
+            ans1 = FindMaximumSubarray1(arr, 0, count-1);
         }
         clock_t c2 = clock();
         Sub ans2;
-        for (int i = 0; i < 10000; ++i) {
-            ans2 = FindMaximumSubarray2(arr, count);
+        for (int i = 0; i < 200000; ++i) {
+            ans2 = FindMaximumSubarray2(arr, 0, count-1);
         }
         clock_t c3 = clock();
         DestroyData(arr);
         long t1 = c2 - c1;
         long t2 = c3 - c2;
         printf("count = %d t1 = %ld t2 = %ld\n", count, t1, t2);
+
+        if (ans1.low != ans2.low || ans1.high != ans2.high || ans1.sum != ans2.sum) {
+            printf("error!\n");
+            exit(-1);
+        }
         if (t2 < t1) {
             break;
         }
